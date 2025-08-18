@@ -249,7 +249,7 @@ const DartsGame = () => {
               color: COLORS.text
             }}
           >
-            ↶
+            BACK
           </button>
           
           <h1 className="text-xl font-bold" style={{ color: COLORS.text }}>
@@ -264,7 +264,7 @@ const DartsGame = () => {
               color: COLORS.text
             }}
           >
-            🔄
+            RESTART
           </button>
         </div>
       </div>
