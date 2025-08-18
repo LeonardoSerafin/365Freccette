@@ -10,7 +10,10 @@ const COLORS = {
   buttonHover: '#d1d5db',
   text: '#111827',
   textSecondary: '#6b7280',
-  border: '#d1d5db'
+  border: '#d1d5db',
+  // Nuovi: sfondo righe per x2 (argento) e x3 (oro)
+  rowX2Bg: '#f0f1f4',
+  rowX3Bg: '#fff7e6'
 };
 
 const DART_VALUES = [
@@ -56,32 +59,29 @@ const DartsGame = () => {
     setThrowsCount(0);
   };
 
-  // Snapshot dello stato corrente
+  // Snapshot dello stato corrente (stato COMPLETO)
   const takeSnapshot = () => {
     const snapshot = {
       players: players.map(p => ({ ...p })),
       currentPlayer,
       currentTurnThrows: [...currentTurnThrows],
       throwsCount,
-      timestamp: Date.now()
+      winner
     };
     setGameHistory(prev => [...prev, snapshot]);
   };
 
-  // Annulla ultima mossa
+  // Annulla ultima mossa: ripristina ESATTAMENTE l’ultimo snapshot e rimuovilo
   const undoLastMove = () => {
-    if (gameHistory.length > 1) {
-      const newHistory = [...gameHistory];
-      newHistory.pop(); // Rimuovi stato corrente
-      const previousState = newHistory[newHistory.length - 1];
-      
-      setPlayers(previousState.players);
-      setCurrentPlayer(previousState.currentPlayer);
-      setCurrentTurnThrows(previousState.currentTurnThrows);
-      setThrowsCount(previousState.throwsCount);
-      setGameHistory(newHistory);
-      setWinner(null);
-    }
+    if (gameHistory.length === 0) return;
+
+    const last = gameHistory[gameHistory.length - 1];
+    setPlayers(last.players.map(p => ({ ...p })));
+    setCurrentPlayer(last.currentPlayer);
+    setCurrentTurnThrows([...last.currentTurnThrows]);
+    setThrowsCount(last.throwsCount);
+    setWinner(last.winner || null);
+    setGameHistory(prev => prev.slice(0, -1));
   };
 
   // Formatta il tiro per la visualizzazione
@@ -101,66 +101,62 @@ const DartsGame = () => {
   const handleScore = (value, multiplier) => {
     if (winner || throwsCount >= 3) return;
 
+    // Salva uno snapshot PRIMA del tiro (una sola volta per questa azione)
+    takeSnapshot();
+
     const score = value * multiplier;
     const newPlayers = [...players];
     const player = newPlayers[currentPlayer];
     const newScore = player.score - score;
-    
+
     // Aggiungi il tiro allo storico del turno
     const throwDisplay = formatThrow(value, multiplier);
-    const newTurnThrows = [...currentTurnThrows, throwDisplay];
-    setCurrentTurnThrows(newTurnThrows);
-    setThrowsCount(throwsCount + 1);
+    setCurrentTurnThrows(prev => [...prev, throwDisplay]);
+    setThrowsCount(prev => prev + 1);
 
-    // Se va sotto zero, bust - torna al punteggio di inizio turno
     if (newScore < 0) {
       player.score = player.turnStartScore;
       setPlayers(newPlayers);
-      takeSnapshot();
       return;
     }
 
-    // Aggiorna il punteggio
     player.score = newScore;
 
-    // Controlla se ha vinto
     if (newScore === 0) {
       setWinner(player);
       setPlayers(newPlayers);
-      takeSnapshot();
       return;
     }
 
-    // Controlla se ha raggiunto il punteggio di un altro giocatore (bust rule)
-    const otherPlayerWithSameScore = newPlayers.find(p => 
+    const otherPlayerWithSameScore = newPlayers.find(p =>
       p.id !== player.id && p.score === newScore
     );
-
     if (otherPlayerWithSameScore) {
-      // Il giocatore che aveva questo punteggio torna a 365
       otherPlayerWithSameScore.score = 365;
       otherPlayerWithSameScore.turnStartScore = 365;
     }
 
     setPlayers(newPlayers);
-    takeSnapshot();
   };
 
   // Passa al prossimo giocatore
   const nextPlayer = () => {
+    // Blocca il cambio giocatore finché non ci sono 3 tiri o se c'è un vincitore
+    if (winner || throwsCount < 3) return;
+
+    // Salva snapshot per poter annullare anche il cambio giocatore (azione singola)
+    takeSnapshot();
+
     const newPlayers = [...players];
-    // Aggiorna il punteggio di inizio turno per il giocatore corrente
     newPlayers[currentPlayer].turnStartScore = newPlayers[currentPlayer].score;
-    
+
     const nextPlayerIndex = (currentPlayer + 1) % numPlayers;
     setCurrentPlayer(nextPlayerIndex);
     setPlayers(newPlayers);
-    
+
     // Reset del turno
     setCurrentTurnThrows([]);
     setThrowsCount(0);
-    
-    takeSnapshot();
   };
 
   // Reset del gioco
@@ -175,6 +171,163 @@ const DartsGame = () => {
     setThrowsCount(0);
   };
 
+  // Ordine inattivi: per id crescente, escludendo l'attivo
+  const getInactiveOrder = () => {
+    if (!players.length) return [];
+    return players
+      .filter((_, idx) => idx !== currentPlayer)
+      .slice()
+      .sort((a, b) => a.id - b.id);
+  };
+
+  // Render pulito dei punteggi (niente ternari annidati per evitare errori di parentesi)
+  const renderScoreboard = () => {
+    if (numPlayers <= 2) {
+      return (
+        <div className="grid gap-4 max-w-md mx-auto" style={{ gridTemplateColumns: `repeat(${numPlayers}, 1fr)` }}>
+          {players.map((player, index) => (
+            <div
+              key={player.id}
+              className="rounded-lg p-4 text-center"
+              style={{
+                backgroundColor: index === currentPlayer ? COLORS.primary : COLORS.secondary,
+                color: 'white'
+              }}
+            >
+              <div className="text-4xl font-bold mb-1">{player.score}</div>
+              <div className="text-sm font-medium mb-2">{player.name}</div>
+              {index === currentPlayer && (
+                <div className="flex justify-center gap-1 mt-2">
+                  {[0, 1, 2].map(throwIndex => (
+                    <div
+                      key={throwIndex}
+                      className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
+                      style={{
+                        backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
+                        color: currentTurnThrows[throwIndex] ? COLORS.text : 'white'
+                      }}
+                    >
+                      {currentTurnThrows[throwIndex] || ''}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (numPlayers === 5) {
+      const orderedOthers = getInactiveOrder(); // [prev, next, next+1, next+2]
+      const row1 = orderedOthers.slice(0, 2);   // seconda riga
+      const row2 = orderedOthers.slice(2, 4);   // terza riga
+
+      return (
+        <div className="max-w-md mx-auto">
+          <div className="grid grid-cols-1 gap-4 mb-4">
+            {players[currentPlayer] && (
+              <div
+                key={players[currentPlayer].id}
+                className="rounded-lg p-4 text-center"
+                style={{ backgroundColor: COLORS.primary, color: 'white' }}
+              >
+                <div className="text-4xl font-bold mb-1">{players[currentPlayer].score}</div>
+                <div className="text-sm font-medium mb-2">{players[currentPlayer].name}</div>
+                <div className="flex justify-center gap-1 mt-2">
+                  {[0, 1, 2].map(throwIndex => (
+                    <div
+                      key={throwIndex}
+                      className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
+                      style={{
+                        backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
+                        color: currentTurnThrows[throwIndex] ? COLORS.text : 'white'
+                      }}
+                    >
+                      {currentTurnThrows[throwIndex] || ''}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            {row1.map(player => (
+              <div
+                key={player.id}
+                className="rounded-lg p-4 text-center"
+                style={{ backgroundColor: COLORS.secondary, color: 'white' }}
+              >
+                <div className="text-4xl font-bold mb-1">{player.score}</div>
+                <div className="text-sm font-medium mb-2">{player.name}</div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {row2.map(player => (
+              <div
+                key={player.id}
+                className="rounded-lg p-4 text-center"
+                style={{ backgroundColor: COLORS.secondary, color: 'white' }}
+              >
+                <div className="text-4xl font-bold mb-1">{player.score}</div>
+                <div className="text-sm font-medium mb-2">{player.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 3-4 giocatori: inattivi in ordine [precedente, poi successivi]
+    const othersInOrder = getInactiveOrder();
+
+    return (
+      <div className="max-w-md mx-auto">
+        <div className="grid grid-cols-1 gap-4 mb-4">
+          {players[currentPlayer] && (
+            <div
+              key={players[currentPlayer].id}
+              className="rounded-lg p-4 text-center"
+              style={{ backgroundColor: COLORS.primary, color: 'white' }}
+            >
+              <div className="text-4xl font-bold mb-1">{players[currentPlayer].score}</div>
+              <div className="text-sm font-medium mb-2">{players[currentPlayer].name}</div>
+              <div className="flex justify-center gap-1 mt-2">
+                {[0, 1, 2].map(throwIndex => (
+                  <div
+                    key={throwIndex}
+                    className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
+                    style={{
+                      backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
+                      color: currentTurnThrows[throwIndex] ? COLORS.text : 'white'
+                    }}
+                  >
+                    {currentTurnThrows[throwIndex] || ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className={`grid gap-4 ${numPlayers === 3 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {othersInOrder.map(player => (
+            <div
+              key={player.id}
+              className="rounded-lg p-4 text-center"
+              style={{ backgroundColor: COLORS.secondary, color: 'white' }}
+            >
+              <div className="text-4xl font-bold mb-1">{player.score}</div>
+              <div className="text-sm font-medium mb-2">{player.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // Schermata di selezione giocatori
   if (!gameStarted) {
     return (
@@ -187,7 +340,7 @@ const DartsGame = () => {
             Seleziona il numero di giocatori
           </p>
           <div className="grid grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map(num => (
+            {[2, 3, 4, 5].map(num => (
               <button
                 key={num}
                 onClick={() => initGame(num)}
@@ -200,7 +353,7 @@ const DartsGame = () => {
                 onMouseOver={(e) => e.target.style.backgroundColor = COLORS.buttonHover}
                 onMouseOut={(e) => e.target.style.backgroundColor = COLORS.button}
               >
-                {num} {num === 1 ? 'Giocatore' : 'Giocatori'}
+                {num} Giocatori
               </button>
             ))}
           </div>
@@ -260,87 +413,63 @@ const DartsGame = () => {
 
       {/* Punteggi giocatori */}
       <div className="p-4">
-        <div className="grid gap-4 max-w-md mx-auto" style={{ gridTemplateColumns: `repeat(${numPlayers}, 1fr)` }}>
-          {players.map((player, index) => (
-            <div
-              key={player.id}
-              className="rounded-lg p-4 text-center"
-              style={{
-                backgroundColor: index === currentPlayer ? COLORS.primary : COLORS.secondary,
-                color: 'white'
-              }}
-            >
-              <div className="text-4xl font-bold mb-1">
-                {player.score}
-              </div>
-              <div className="text-sm font-medium mb-2">
-                {player.name}
-              </div>
-              {/* Storico tiri del turno corrente - solo per il giocatore attivo */}
-              {index === currentPlayer && (
-                <div className="flex justify-center gap-1 mt-2">
-                  {[0, 1, 2].map(throwIndex => (
-                    <div
-                      key={throwIndex}
-                      className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
-                      style={{
-                        backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
-                        color: currentTurnThrows[throwIndex] ? COLORS.text : 'white'
-                      }}
-                    >
-                      {currentTurnThrows[throwIndex] || ''}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        {renderScoreboard()}
       </div>
 
       {/* Griglia punteggi */}
       <div className="p-4">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-sm p-4">
-          <div className="grid grid-cols-10 gap-1">
-            {DART_VALUES.map((row, rowIndex) => 
-              row.map((value, colIndex) => (
-                <button
-                  key={`${rowIndex}-${colIndex}`}
-                  onClick={() => handleScore(value, MULTIPLIERS[rowIndex])}
-                  disabled={throwsCount >= 3 || winner}
-                  className="aspect-square rounded-lg font-semibold text-sm transition-colors active:scale-95 disabled:opacity-50"
-                  style={{
-                    backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
-                    color: COLORS.text,
-                    border: `1px solid ${COLORS.border}`,
-                    cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
-                  }}
-                  onTouchStart={(e) => {
-                    if (throwsCount < 3) e.target.style.backgroundColor = COLORS.buttonHover;
-                  }}
-                  onTouchEnd={(e) => {
-                    if (throwsCount < 3) e.target.style.backgroundColor = COLORS.button;
-                  }}
-                >
-                  {value}
-                  {MULTIPLIERS[rowIndex] > 1 && (
-                    <div className="text-xs opacity-70">
-                      ×{MULTIPLIERS[rowIndex]}
-                    </div>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
+        <div className="mx-auto w-full bg-white rounded-lg shadow-sm p-3">
           
+          {/* Righe con separatori e sfondi per x2/x3 */}
+          <div className="space-y-1">
+            {DART_VALUES.map((row, rowIndex) => {
+              const mult = MULTIPLIERS[rowIndex];
+              const rowBg =
+                mult === 2 ? COLORS.rowX2Bg :
+                mult === 3 ? COLORS.rowX3Bg : 'transparent';
+              const isGroupStart = rowIndex === 2 || rowIndex === 4;
+
+              return (
+                <div
+                  key={`row-${rowIndex}`}
+                  className={`grid grid-cols-10 gap-[2px] rounded-md px-1 py-1 ${isGroupStart ? 'mt-3' : ''}`}
+                  style={{ backgroundColor: rowBg }}
+                >
+                  {row.map((value, colIndex) => (
+                    <button
+                      key={`${rowIndex}-${colIndex}`}
+                      onClick={() => handleScore(value, MULTIPLIERS[rowIndex])}
+                      disabled={throwsCount >= 3 || winner}
+                      className="aspect-square rounded-md font-semibold text-lg transition-colors active:scale-95 disabled:opacity-50 shadow-sm"
+                      style={{
+                        backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
+                        color: COLORS.text,
+                        border: `1px solid ${COLORS.border}`,
+                        cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
+                      }}
+                      onTouchStart={(e) => {
+                        if (throwsCount < 3) e.currentTarget.style.backgroundColor = COLORS.buttonHover;
+                      }}
+                      onTouchEnd={(e) => {
+                        if (throwsCount < 3) e.currentTarget.style.backgroundColor = COLORS.button;
+                      }}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
           {/* Pulsanti speciali */}
           <div className="mt-4 space-y-2">
-            {/* Riga 1: 25, 50 e Miss */}
+            {/* Riga 1: Miss, 25 e 50 */}
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => handleScore(0, 1)}
                 disabled={throwsCount >= 3 || winner}
-                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                className="py-4 rounded-md font-semibold text-lg transition-colors disabled:opacity-50"
                 style={{
                   backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
                   color: COLORS.text,
@@ -353,7 +482,7 @@ const DartsGame = () => {
               <button
                 onClick={() => handleScore(25, 1)}
                 disabled={throwsCount >= 3 || winner}
-                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                className="py-4 rounded-md font-semibold text-lg transition-colors disabled:opacity-50"
                 style={{
                   backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
                   color: COLORS.text,
@@ -366,7 +495,7 @@ const DartsGame = () => {
               <button
                 onClick={() => handleScore(50, 1)}
                 disabled={throwsCount >= 3 || winner}
-                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                className="py-4 rounded-md font-semibold text-lg transition-colors disabled:opacity-50"
                 style={{
                   backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
                   color: COLORS.text,
@@ -378,12 +507,12 @@ const DartsGame = () => {
               </button>
             </div>
             
-            {/* Riga 2: Indietro e Next Player */}
+            {/* Riga 2: BACK e Next Player */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={undoLastMove}
                 disabled={gameHistory.length <= 1}
-                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                className="py-4 rounded-md font-semibold text-lg transition-colors disabled:opacity-50"
                 style={{ 
                   backgroundColor: gameHistory.length > 1 ? COLORS.button : COLORS.border,
                   color: COLORS.text,
@@ -391,15 +520,15 @@ const DartsGame = () => {
                   cursor: gameHistory.length <= 1 ? 'not-allowed' : 'pointer'
                 }}
               >
-                INDIETRO
+                BACK
               </button>
               <button
                 onClick={nextPlayer}
-                disabled={winner}
-                className="py-3 rounded-lg font-semibold text-white transition-colors disabled:opacity-50"
+                disabled={winner || throwsCount < 3}
+                className="py-4 rounded-md font-semibold text-white text-lg transition-colors disabled:opacity-50"
                 style={{ 
-                  backgroundColor: winner ? COLORS.border : COLORS.primary,
-                  cursor: winner ? 'not-allowed' : 'pointer'
+                  backgroundColor: (winner || throwsCount < 3) ? COLORS.border : COLORS.primary,
+                  cursor: (winner || throwsCount < 3) ? 'not-allowed' : 'pointer'
                 }}
               >
                 NEXT PLAYER
