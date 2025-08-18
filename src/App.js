@@ -34,6 +34,8 @@ const DartsGame = () => {
   const [gameHistory, setGameHistory] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
   const [winner, setWinner] = useState(null);
+  const [currentTurnThrows, setCurrentTurnThrows] = useState([]);
+  const [throwsCount, setThrowsCount] = useState(0);
 
   // Inizializza giocatori
   const initGame = (playerCount) => {
@@ -46,10 +48,12 @@ const DartsGame = () => {
     
     setPlayers(newPlayers);
     setCurrentPlayer(0);
-    setGameHistory([{ players: newPlayers, currentPlayer: 0 }]);
+    setGameHistory([{ players: newPlayers, currentPlayer: 0, currentTurnThrows: [], throwsCount: 0 }]);
     setNumPlayers(playerCount);
     setGameStarted(true);
     setWinner(null);
+    setCurrentTurnThrows([]);
+    setThrowsCount(0);
   };
 
   // Snapshot dello stato corrente
@@ -57,6 +61,8 @@ const DartsGame = () => {
     const snapshot = {
       players: players.map(p => ({ ...p })),
       currentPlayer,
+      currentTurnThrows: [...currentTurnThrows],
+      throwsCount,
       timestamp: Date.now()
     };
     setGameHistory(prev => [...prev, snapshot]);
@@ -71,24 +77,46 @@ const DartsGame = () => {
       
       setPlayers(previousState.players);
       setCurrentPlayer(previousState.currentPlayer);
+      setCurrentTurnThrows(previousState.currentTurnThrows);
+      setThrowsCount(previousState.throwsCount);
       setGameHistory(newHistory);
       setWinner(null);
     }
   };
 
+  // Formatta il tiro per la visualizzazione
+  const formatThrow = (value, multiplier) => {
+    if (value === 0) return 'MISS';
+    if (value === 25) return 'BULL';
+    if (value === 50) return 'BULL';
+    
+    if (multiplier === 1) return value.toString();
+    if (multiplier === 2) return `D${value}`;
+    if (multiplier === 3) return `T${value}`;
+    
+    return value.toString();
+  };
+
   // Gestisce il punteggio
   const handleScore = (value, multiplier) => {
-    if (winner) return;
+    if (winner || throwsCount >= 3) return;
 
     const score = value * multiplier;
     const newPlayers = [...players];
     const player = newPlayers[currentPlayer];
     const newScore = player.score - score;
+    
+    // Aggiungi il tiro allo storico del turno
+    const throwDisplay = formatThrow(value, multiplier);
+    const newTurnThrows = [...currentTurnThrows, throwDisplay];
+    setCurrentTurnThrows(newTurnThrows);
+    setThrowsCount(throwsCount + 1);
 
     // Se va sotto zero, bust - torna al punteggio di inizio turno
     if (newScore < 0) {
       player.score = player.turnStartScore;
-      nextPlayer();
+      setPlayers(newPlayers);
+      takeSnapshot();
       return;
     }
 
@@ -99,6 +127,7 @@ const DartsGame = () => {
     if (newScore === 0) {
       setWinner(player);
       setPlayers(newPlayers);
+      takeSnapshot();
       return;
     }
 
@@ -126,6 +155,11 @@ const DartsGame = () => {
     const nextPlayerIndex = (currentPlayer + 1) % numPlayers;
     setCurrentPlayer(nextPlayerIndex);
     setPlayers(newPlayers);
+    
+    // Reset del turno
+    setCurrentTurnThrows([]);
+    setThrowsCount(0);
+    
     takeSnapshot();
   };
 
@@ -137,6 +171,8 @@ const DartsGame = () => {
     setGameHistory([]);
     setGameStarted(false);
     setWinner(null);
+    setCurrentTurnThrows([]);
+    setThrowsCount(0);
   };
 
   // Schermata di selezione giocatori
@@ -248,9 +284,26 @@ const DartsGame = () => {
               <div className="text-4xl font-bold mb-1">
                 {player.score}
               </div>
-              <div className="text-sm font-medium">
+              <div className="text-sm font-medium mb-2">
                 {player.name}
               </div>
+              {/* Storico tiri del turno corrente - solo per il giocatore attivo */}
+              {index === currentPlayer && (
+                <div className="flex justify-center gap-1 mt-2">
+                  {[0, 1, 2].map(throwIndex => (
+                    <div
+                      key={throwIndex}
+                      className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
+                      style={{
+                        backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
+                        color: currentTurnThrows[throwIndex] ? COLORS.text : 'white'
+                      }}
+                    >
+                      {currentTurnThrows[throwIndex] || ''}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -265,14 +318,20 @@ const DartsGame = () => {
                 <button
                   key={`${rowIndex}-${colIndex}`}
                   onClick={() => handleScore(value, MULTIPLIERS[rowIndex])}
-                  className="aspect-square rounded-lg font-semibold text-sm transition-colors active:scale-95"
+                  disabled={throwsCount >= 3 || winner}
+                  className="aspect-square rounded-lg font-semibold text-sm transition-colors active:scale-95 disabled:opacity-50"
                   style={{
-                    backgroundColor: COLORS.button,
+                    backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
                     color: COLORS.text,
-                    border: `1px solid ${COLORS.border}`
+                    border: `1px solid ${COLORS.border}`,
+                    cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
                   }}
-                  onTouchStart={(e) => e.target.style.backgroundColor = COLORS.buttonHover}
-                  onTouchEnd={(e) => e.target.style.backgroundColor = COLORS.button}
+                  onTouchStart={(e) => {
+                    if (throwsCount < 3) e.target.style.backgroundColor = COLORS.buttonHover;
+                  }}
+                  onTouchEnd={(e) => {
+                    if (throwsCount < 3) e.target.style.backgroundColor = COLORS.button;
+                  }}
                 >
                   {value}
                   {MULTIPLIERS[rowIndex] > 1 && (
@@ -291,22 +350,26 @@ const DartsGame = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleScore(25, 1)}
-                className="py-3 rounded-lg font-semibold transition-colors"
+                disabled={throwsCount >= 3 || winner}
+                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
                 style={{
-                  backgroundColor: COLORS.button,
+                  backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
                   color: COLORS.text,
-                  border: `1px solid ${COLORS.border}`
+                  border: `1px solid ${COLORS.border}`,
+                  cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
                 }}
               >
                 BULL (25)
               </button>
               <button
                 onClick={() => handleScore(50, 1)}
-                className="py-3 rounded-lg font-semibold transition-colors"
+                disabled={throwsCount >= 3 || winner}
+                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
                 style={{
-                  backgroundColor: COLORS.button,
+                  backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
                   color: COLORS.text,
-                  border: `1px solid ${COLORS.border}`
+                  border: `1px solid ${COLORS.border}`,
+                  cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
                 }}
               >
                 BULL (50)
@@ -317,19 +380,25 @@ const DartsGame = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleScore(0, 1)}
-                className="py-3 rounded-lg font-semibold transition-colors"
+                disabled={throwsCount >= 3 || winner}
+                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
                 style={{
-                  backgroundColor: COLORS.button,
+                  backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
                   color: COLORS.text,
-                  border: `1px solid ${COLORS.border}`
+                  border: `1px solid ${COLORS.border}`,
+                  cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
                 }}
               >
                 MISS
               </button>
               <button
                 onClick={nextPlayer}
-                className="py-3 rounded-lg font-semibold text-white transition-colors"
-                style={{ backgroundColor: COLORS.primary }}
+                disabled={winner}
+                className="py-3 rounded-lg font-semibold text-white transition-colors disabled:opacity-50"
+                style={{ 
+                  backgroundColor: winner ? COLORS.border : COLORS.primary,
+                  cursor: winner ? 'not-allowed' : 'pointer'
+                }}
               >
                 NEXT PLAYER
               </button>
