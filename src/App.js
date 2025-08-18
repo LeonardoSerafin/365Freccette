@@ -39,12 +39,15 @@ const DartsGame = () => {
   const [winner, setWinner] = useState(null);
   const [currentTurnThrows, setCurrentTurnThrows] = useState([]);
   const [throwsCount, setThrowsCount] = useState(0);
+  // NUOVI STATI: selezione modalità e nomi
+  const [selectedNumPlayers, setSelectedNumPlayers] = useState(null);
+  const [nameInputs, setNameInputs] = useState([]);
 
-  // Inizializza giocatori
-  const initGame = (playerCount) => {
+  // Inizializza giocatori (aggiornata per accettare nomi)
+  const initGame = (playerCount, names = []) => {
     const newPlayers = Array.from({ length: playerCount }, (_, i) => ({
       id: i + 1,
-      name: `PLAYER ${i + 1}`,
+      name: names[i] && names[i].trim() ? names[i].trim() : `PLAYER ${i + 1}`,
       score: 365,
       turnStartScore: 365
     }));
@@ -169,6 +172,30 @@ const DartsGame = () => {
     setWinner(null);
     setCurrentTurnThrows([]);
     setThrowsCount(0);
+  };
+
+  // Selezione numero giocatori (non avvia la partita)
+  const selectPlayers = (num) => {
+    setSelectedNumPlayers(num);
+    setNameInputs(prev => {
+      const next = prev.slice(0, num);
+      while (next.length < num) next.push('');
+      return next;
+    });
+  };
+
+  const handleNameChange = (idx, value) => {
+    setNameInputs(prev => {
+      const next = [...prev];
+      next[idx] = value.slice(0, 8); // max 8 caratteri
+      return next;
+    });
+  };
+
+  const startGame = () => {
+    if (!selectedNumPlayers) return;
+    const names = nameInputs.map((n, i) => (n && n.trim()) ? n.trim() : `PLAYER ${i + 1}`);
+    initGame(selectedNumPlayers, names);
   };
 
   // Ordine inattivi: per id crescente, escludendo l'attivo
@@ -339,24 +366,64 @@ const DartsGame = () => {
           <p className="text-center mb-6" style={{ color: COLORS.textSecondary }}>
             Seleziona il numero di giocatori
           </p>
-          <div className="grid grid-cols-2 gap-4">
-            {[2, 3, 4, 5].map(num => (
-              <button
-                key={num}
-                onClick={() => initGame(num)}
-                className="py-4 px-6 rounded-lg font-semibold text-lg transition-colors"
-                style={{ 
-                  backgroundColor: COLORS.button,
-                  color: COLORS.text,
-                  border: `2px solid ${COLORS.border}`
-                }}
-                onMouseOver={(e) => e.target.style.backgroundColor = COLORS.buttonHover}
-                onMouseOut={(e) => e.target.style.backgroundColor = COLORS.button}
-              >
-                {num} Giocatori
-              </button>
-            ))}
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            {[2, 3, 4, 5].map(num => {
+              const selected = selectedNumPlayers === num;
+              return (
+                <button
+                  key={num}
+                  onClick={() => selectPlayers(num)}
+                  className="py-4 px-6 rounded-lg font-semibold text-lg transition-colors"
+                  style={{ 
+                    backgroundColor: selected ? COLORS.primary : COLORS.button,
+                    color: selected ? 'white' : COLORS.text,
+                    border: `2px solid ${selected ? COLORS.primary : COLORS.border}`,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {num} Giocatori
+                </button>
+              );
+            })}
           </div>
+
+          {selectedNumPlayers && (
+            <div className="space-y-3">
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                Inserisci i nomi (max 8 caratteri)
+              </p>
+              <div className="grid gap-3" style={{ gridTemplateColumns: '1fr' }}>
+                {Array.from({ length: selectedNumPlayers }, (_, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    maxLength={8}
+                    value={nameInputs[i] || ''}
+                    onChange={(e) => handleNameChange(i, e.target.value)}
+                    placeholder={`PLAYER ${i + 1}`}
+                    className="w-full px-3 py-2 rounded-md"
+                    style={{
+                      border: `1px solid ${COLORS.border}`,
+                      color: COLORS.text,
+                      backgroundColor: 'white'
+                    }}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={startGame}
+                className="w-full py-3 rounded-lg font-semibold text-white text-lg transition-colors"
+                style={{ 
+                  backgroundColor: COLORS.primary,
+                  cursor: 'pointer'
+                }}
+              >
+                Avvia Partita
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
