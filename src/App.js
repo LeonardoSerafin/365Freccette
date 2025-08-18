@@ -249,7 +249,7 @@ const DartsGame = () => {
               color: COLORS.text
             }}
           >
-            BACK
+            <b>BACK</b>
           </button>
           
           <h1 className="text-xl font-bold" style={{ color: COLORS.text }}>
@@ -264,7 +264,7 @@ const DartsGame = () => {
               color: COLORS.text
             }}
           >
-            RESTART
+            <b>RESTART</b>
           </button>
         </div>
       </div>
@@ -346,8 +346,8 @@ const DartsGame = () => {
           
           {/* Pulsanti speciali */}
           <div className="mt-4 space-y-2">
-            {/* Riga 1: 25 e 50 */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Riga 1: 25, 50 e Miss */}
+            <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => handleScore(25, 1)}
                 disabled={throwsCount >= 3 || winner}
@@ -374,10 +374,6 @@ const DartsGame = () => {
               >
                 BULL (50)
               </button>
-            </div>
-            
-            {/* Riga 2: Miss e Next Player */}
-            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleScore(0, 1)}
                 disabled={throwsCount >= 3 || winner}
@@ -390,6 +386,23 @@ const DartsGame = () => {
                 }}
               >
                 MISS
+              </button>
+            </div>
+            
+            {/* Riga 2: Indietro e Next Player */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={undoLastMove}
+                disabled={gameHistory.length <= 1}
+                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                style={{ 
+                  backgroundColor: gameHistory.length > 1 ? COLORS.button : COLORS.border,
+                  color: COLORS.text,
+                  border: `1px solid ${COLORS.border}`,
+                  cursor: gameHistory.length <= 1 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                INDIETRO
               </button>
               <button
                 onClick={nextPlayer}
