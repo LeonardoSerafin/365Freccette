@@ -240,17 +240,6 @@ const DartsGame = () => {
       {/* Header */}
       <div className="bg-white shadow-sm p-4">
         <div className="flex justify-between items-center max-w-md mx-auto">
-          <button
-            onClick={undoLastMove}
-            disabled={gameHistory.length <= 1}
-            className="p-2 rounded-lg transition-colors disabled:opacity-50"
-            style={{ 
-              backgroundColor: gameHistory.length > 1 ? COLORS.button : COLORS.border,
-              color: COLORS.text
-            }}
-          >
-            <b>BACK</b>
-          </button>
           
           <h1 className="text-xl font-bold" style={{ color: COLORS.text }}>
             365 DARTS
@@ -349,6 +338,19 @@ const DartsGame = () => {
             {/* Riga 1: 25, 50 e Miss */}
             <div className="grid grid-cols-3 gap-2">
               <button
+                onClick={() => handleScore(0, 1)}
+                disabled={throwsCount >= 3 || winner}
+                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+                style={{
+                  backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
+                  color: COLORS.text,
+                  border: `1px solid ${COLORS.border}`,
+                  cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
+                }}
+              >
+                MISS
+              </button>
+              <button
                 onClick={() => handleScore(25, 1)}
                 disabled={throwsCount >= 3 || winner}
                 className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
@@ -373,19 +375,6 @@ const DartsGame = () => {
                 }}
               >
                 BULL (50)
-              </button>
-              <button
-                onClick={() => handleScore(0, 1)}
-                disabled={throwsCount >= 3 || winner}
-                className="py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
-                style={{
-                  backgroundColor: throwsCount >= 3 ? COLORS.border : COLORS.button,
-                  color: COLORS.text,
-                  border: `1px solid ${COLORS.border}`,
-                  cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer'
-                }}
-              >
-                MISS
               </button>
             </div>
             
