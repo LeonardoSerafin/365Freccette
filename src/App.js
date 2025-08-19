@@ -70,6 +70,35 @@ const DartsGame = () => {
     setDarkMode(prefersDark);
   }, []);
 
+  // Funzione helper per creare l'effetto shine sui pulsanti rossi
+  const getRedButtonStyle = (isActive, darkMode) => {
+    if (!isActive) return {};
+    
+    return {
+      background: darkMode 
+        ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)'
+        : 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+      boxShadow: darkMode
+        ? '0 8px 32px rgba(220, 38, 38, 0.3), 0 2px 8px rgba(220, 38, 38, 0.1)'
+        : '0 8px 32px rgba(220, 38, 38, 0.2), 0 2px 8px rgba(220, 38, 38, 0.1)',
+      border: '2px solid rgba(255, 255, 255, 0.2)'
+    };
+  };
+
+  // Componente per l'effetto shine
+  const ShineEffect = ({ show = true }) => (
+    show && (
+      <div 
+        className="absolute inset-0 opacity-10"
+        style={{
+          background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+          transform: 'translateX(-100%)',
+          animation: 'shine 3s ease-in-out infinite'
+        }}
+      />
+    )
+  );
+
   // Funzione per ottenere i colori attuali
   const getColors = () => darkMode ? COLORS.dark : COLORS.light;
 
@@ -300,46 +329,94 @@ const DartsGame = () => {
   const renderScoreboard = () => {
     const colors = getColors();
     
+    // Funzione per creare gradienti dinamici
+    const getPlayerGradient = (isActive, darkMode) => {
+      if (isActive) {
+        // Gradiente per giocatore attivo (rosso con sfumature)
+        return darkMode 
+          ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)'
+          : 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)';
+      } else {
+        // Gradiente per giocatori inattivi (grigio con sfumature)
+        return darkMode
+          ? 'linear-gradient(135deg, #6b7280 0%, #4b5563 50%, #374151 100%)'
+          : 'linear-gradient(135deg, #9ca3af 0%, #6b7280 50%, #4b5563 100%)';
+      }
+    };
+
+    // Funzione per aggiungere un sottile effetto glow
+    const getBoxShadow = (isActive, darkMode) => {
+      if (isActive) {
+        return darkMode
+          ? '0 8px 32px rgba(220, 38, 38, 0.3), 0 2px 8px rgba(220, 38, 38, 0.1)'
+          : '0 8px 32px rgba(220, 38, 38, 0.2), 0 2px 8px rgba(220, 38, 38, 0.1)';
+      } else {
+        return darkMode
+          ? '0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1)'
+          : '0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.05)';
+      }
+    };
+    
     if (numPlayers <= 2) {
       return (
         <div className="grid gap-4 max-w-md mx-auto" style={{ gridTemplateColumns: `repeat(${numPlayers}, 1fr)` }}>
           {players.map((player, index) => (
             <div
               key={player.id}
-              className="rounded-lg p-4 text-center"
+              className="rounded-lg p-4 text-center relative overflow-hidden transform transition-all duration-300"
               style={{
-                backgroundColor: index === currentPlayer ? colors.primary : colors.secondary,
-                color: 'white'
+                background: getPlayerGradient(index === currentPlayer, darkMode),
+                color: 'white',
+                boxShadow: getBoxShadow(index === currentPlayer, darkMode),
+                border: index === currentPlayer ? '2px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.1)'
               }}
             >
-              <div className="text-4xl font-bold mb-1">{player.score}</div>
-              <div className="text-sm font-medium mb-2">{player.name}</div>
-              {index === currentPlayer && (
-                <div className="flex justify-center gap-1 mt-2">
-                  {[0, 1, 2].map(throwIndex => (
-                    <div
-                      key={throwIndex}
-                      className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
-                      style={{
-                        backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
-                        color: currentTurnThrows[throwIndex] ? '#111827' : 'white'
-                      }}
-                    >
-                      {currentTurnThrows[throwIndex] || ''}
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Effetto shine sottile */}
+              <div 
+                className="absolute inset-0 opacity-10"
+                style={{
+                  background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+                  transform: 'translateX(-100%)',
+                  animation: index === currentPlayer ? 'shine 3s ease-in-out infinite' : 'none'
+                }}
+              />
+              
+              <div className="relative z-10">
+                <div className="text-4xl font-bold mb-1 drop-shadow-lg">{player.score}</div>
+                <div className="text-sm font-medium mb-2 opacity-90">{player.name}</div>
+                {index === currentPlayer && (
+                  <div className="flex justify-center gap-1 mt-2">
+                    {[0, 1, 2].map(throwIndex => (
+                      <div
+                        key={throwIndex}
+                        className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium transition-all duration-200"
+                        style={{
+                          backgroundColor: currentTurnThrows[throwIndex] 
+                            ? 'rgba(255,255,255,0.95)' 
+                            : 'rgba(255,255,255,0.2)',
+                          color: currentTurnThrows[throwIndex] ? '#111827' : 'white',
+                          boxShadow: currentTurnThrows[throwIndex] 
+                            ? '0 2px 4px rgba(0,0,0,0.2)' 
+                            : 'none'
+                        }}
+                      >
+                        {currentTurnThrows[throwIndex] || ''}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
       );
+
     }
 
     if (numPlayers === 5) {
-      const orderedOthers = getInactiveOrder(); // [prev, next, next+1, next+2]
-      const row1 = orderedOthers.slice(0, 2);   // seconda riga
-      const row2 = orderedOthers.slice(2, 4);   // terza riga
+      const orderedOthers = getInactiveOrder();
+      const row1 = orderedOthers.slice(0, 2);
+      const row2 = orderedOthers.slice(2, 4);
 
       return (
         <div className="max-w-md mx-auto">
@@ -347,24 +424,45 @@ const DartsGame = () => {
             {players[currentPlayer] && (
               <div
                 key={players[currentPlayer].id}
-                className="rounded-lg p-4 text-center"
-                style={{ backgroundColor: colors.primary, color: 'white' }}
+                className="rounded-lg p-4 text-center relative overflow-hidden transform transition-all duration-300"
+                style={{
+                  background: getPlayerGradient(true, darkMode),
+                  color: 'white',
+                  boxShadow: getBoxShadow(true, darkMode),
+                  border: '2px solid rgba(255, 255, 255, 0.2)'
+                }}
               >
-                <div className="text-4xl font-bold mb-1">{players[currentPlayer].score}</div>
-                <div className="text-sm font-medium mb-2">{players[currentPlayer].name}</div>
-                <div className="flex justify-center gap-1 mt-2">
-                  {[0, 1, 2].map(throwIndex => (
-                    <div
-                      key={throwIndex}
-                      className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
-                      style={{
-                        backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
-                        color: currentTurnThrows[throwIndex] ? '#111827' : 'white'
-                      }}
-                    >
-                      {currentTurnThrows[throwIndex] || ''}
-                    </div>
-                  ))}
+                <div 
+                  className="absolute inset-0 opacity-10"
+                  style={{
+                    background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+                    transform: 'translateX(-100%)',
+                    animation: 'shine 3s ease-in-out infinite'
+                  }}
+                />
+                
+                <div className="relative z-10">
+                  <div className="text-4xl font-bold mb-1 drop-shadow-lg">{players[currentPlayer].score}</div>
+                  <div className="text-sm font-medium mb-2 opacity-90">{players[currentPlayer].name}</div>
+                  <div className="flex justify-center gap-1 mt-2">
+                    {[0, 1, 2].map(throwIndex => (
+                      <div
+                        key={throwIndex}
+                        className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium transition-all duration-200"
+                        style={{
+                          backgroundColor: currentTurnThrows[throwIndex] 
+                            ? 'rgba(255,255,255,0.95)' 
+                            : 'rgba(255,255,255,0.2)',
+                          color: currentTurnThrows[throwIndex] ? '#111827' : 'white',
+                          boxShadow: currentTurnThrows[throwIndex] 
+                            ? '0 2px 4px rgba(0,0,0,0.2)' 
+                            : 'none'
+                        }}
+                      >
+                        {currentTurnThrows[throwIndex] || ''}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -374,11 +472,18 @@ const DartsGame = () => {
             {row1.map(player => (
               <div
                 key={player.id}
-                className="rounded-lg p-4 text-center"
-                style={{ backgroundColor: colors.secondary, color: 'white' }}
+                className="rounded-lg p-4 text-center relative overflow-hidden transform transition-all duration-300 hover:scale-105"
+                style={{
+                  background: getPlayerGradient(false, darkMode),
+                  color: 'white',
+                  boxShadow: getBoxShadow(false, darkMode),
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}
               >
-                <div className="text-4xl font-bold mb-1">{player.score}</div>
-                <div className="text-sm font-medium mb-2">{player.name}</div>
+                <div className="relative z-10">
+                  <div className="text-4xl font-bold mb-1 drop-shadow-lg">{player.score}</div>
+                  <div className="text-sm font-medium mb-2 opacity-90">{player.name}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -386,11 +491,18 @@ const DartsGame = () => {
             {row2.map(player => (
               <div
                 key={player.id}
-                className="rounded-lg p-4 text-center"
-                style={{ backgroundColor: colors.secondary, color: 'white' }}
+                className="rounded-lg p-4 text-center relative overflow-hidden transform transition-all duration-300 hover:scale-105"
+                style={{
+                  background: getPlayerGradient(false, darkMode),
+                  color: 'white',
+                  boxShadow: getBoxShadow(false, darkMode),
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}
               >
-                <div className="text-4xl font-bold mb-1">{player.score}</div>
-                <div className="text-sm font-medium mb-2">{player.name}</div>
+                <div className="relative z-10">
+                  <div className="text-4xl font-bold mb-1 drop-shadow-lg">{player.score}</div>
+                  <div className="text-sm font-medium mb-2 opacity-90">{player.name}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -407,24 +519,45 @@ const DartsGame = () => {
           {players[currentPlayer] && (
             <div
               key={players[currentPlayer].id}
-              className="rounded-lg p-4 text-center"
-              style={{ backgroundColor: colors.primary, color: 'white' }}
+              className="rounded-lg p-4 text-center relative overflow-hidden transform transition-all duration-300"
+              style={{
+                background: getPlayerGradient(true, darkMode),
+                color: 'white',
+                boxShadow: getBoxShadow(true, darkMode),
+                border: '2px solid rgba(255, 255, 255, 0.2)'
+              }}
             >
-              <div className="text-4xl font-bold mb-1">{players[currentPlayer].score}</div>
-              <div className="text-sm font-medium mb-2">{players[currentPlayer].name}</div>
-              <div className="flex justify-center gap-1 mt-2">
-                {[0, 1, 2].map(throwIndex => (
-                  <div
-                    key={throwIndex}
-                    className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium"
-                    style={{
-                        backgroundColor: currentTurnThrows[throwIndex] ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)',
-                        color: currentTurnThrows[throwIndex] ? '#111827' : 'white'
+              <div 
+                className="absolute inset-0 opacity-10"
+                style={{
+                  background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+                  transform: 'translateX(-100%)',
+                  animation: 'shine 3s ease-in-out infinite'
+                }}
+              />
+              
+              <div className="relative z-10">
+                <div className="text-4xl font-bold mb-1 drop-shadow-lg">{players[currentPlayer].score}</div>
+                <div className="text-sm font-medium mb-2 opacity-90">{players[currentPlayer].name}</div>
+                <div className="flex justify-center gap-1 mt-2">
+                  {[0, 1, 2].map(throwIndex => (
+                    <div
+                      key={throwIndex}
+                      className="w-12 h-6 rounded text-xs flex items-center justify-center font-medium transition-all duration-200"
+                      style={{
+                        backgroundColor: currentTurnThrows[throwIndex] 
+                          ? 'rgba(255,255,255,0.95)' 
+                          : 'rgba(255,255,255,0.2)',
+                        color: currentTurnThrows[throwIndex] ? '#111827' : 'white',
+                        boxShadow: currentTurnThrows[throwIndex] 
+                          ? '0 2px 4px rgba(0,0,0,0.2)' 
+                          : 'none'
                       }}
-                  >
-                    {currentTurnThrows[throwIndex] || ''}
-                  </div>
-                ))}
+                    >
+                      {currentTurnThrows[throwIndex] || ''}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -434,11 +567,18 @@ const DartsGame = () => {
           {othersInOrder.map(player => (
             <div
               key={player.id}
-              className="rounded-lg p-4 text-center"
-              style={{ backgroundColor: colors.secondary, color: 'white' }}
+              className="rounded-lg p-4 text-center relative overflow-hidden transform transition-all duration-300 hover:scale-105"
+              style={{
+                background: getPlayerGradient(false, darkMode),
+                color: 'white',
+                boxShadow: getBoxShadow(false, darkMode),
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
             >
-              <div className="text-4xl font-bold mb-1">{player.score}</div>
-              <div className="text-sm font-medium mb-2">{player.name}</div>
+              <div className="relative z-10">
+                <div className="text-4xl font-bold mb-1 drop-shadow-lg">{player.score}</div>
+                <div className="text-sm font-medium mb-2 opacity-90">{player.name}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -476,15 +616,25 @@ const DartsGame = () => {
                 <button
                   key={num}
                   onClick={() => selectPlayers(num)}
-                  className="py-4 px-6 rounded-lg font-semibold text-lg transition-colors"
+                  className="py-4 px-6 rounded-lg font-semibold text-lg transition-colors relative overflow-hidden"
                   style={{ 
-                    backgroundColor: selected ? colors.primary : colors.button,
-                    color: selected ? 'white' : colors.text,
-                    border: `2px solid ${selected ? colors.primary : colors.border}`,
-                    cursor: 'pointer'
+                    ...(selected 
+                      ? {
+                          ...getRedButtonStyle(true, darkMode),
+                          color: 'white'
+                        }
+                      : {
+                          backgroundColor: colors.button,
+                          color: colors.text,
+                          border: `2px solid ${colors.border}`
+                        }),
+                    cursor: 'pointer',
+                    outline: 'none',
+                    WebkitTapHighlightColor: 'transparent'
                   }}
                 >
-                  {num} Giocatori
+                  <ShineEffect show={selected} />
+                  <span className="relative z-10">{num} Giocatori</span>
                 </button>
               );
             })}
@@ -508,7 +658,8 @@ const DartsGame = () => {
                       style={{
                         border: `1px solid ${duplicateNames.includes(i) ? '#dc2626' : colors.border}`,
                         color: colors.text,
-                        backgroundColor: colors.cardBg
+                        backgroundColor: colors.cardBg,
+                        outline: 'none'
                       }}
                     />
                     {duplicateNames.includes(i) && nameInputs[i] && nameInputs[i].trim() && (
@@ -523,14 +674,24 @@ const DartsGame = () => {
               <button
                 onClick={startGame}
                 disabled={duplicateNames.length > 0}
-                className="w-full py-3 rounded-lg font-semibold text-white text-lg transition-colors"
+                className="w-full py-3 rounded-lg font-semibold text-white text-lg transition-colors relative overflow-hidden"
                 style={{ 
-                  backgroundColor: duplicateNames.length > 0 ? '#6b7280' : colors.primary,
-                  opacity: duplicateNames.length > 0 ? 0.5 : 1,
-                  cursor: duplicateNames.length > 0 ? 'not-allowed' : 'pointer'
+                  ...(duplicateNames.length > 0 
+                    ? {
+                        backgroundColor: '#6b7280',
+                        opacity: 0.5,
+                        cursor: 'not-allowed'
+                      }
+                    : {
+                        ...getRedButtonStyle(true, darkMode),
+                        cursor: 'pointer'
+                      }),
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
               >
-                Avvia Partita
+                <ShineEffect show={duplicateNames.length === 0} />
+                <span className="relative z-10">Avvia Partita</span>
               </button>
             </div>
           )}
@@ -703,27 +864,41 @@ const DartsGame = () => {
               background: `linear-gradient(45deg, ${colors.primary}, #dc2626, ${colors.primary})`,
               backgroundSize: '200% 200%',
               animation: 'gradientShift 3s ease-in-out infinite',
-              boxShadow: `0 8px 32px ${colors.primary}40`,
+              boxShadow: darkMode
+                ? '0 8px 32px rgba(220, 38, 38, 0.4), 0 2px 8px rgba(220, 38, 38, 0.2)'
+                : '0 8px 32px rgba(220, 38, 38, 0.3), 0 2px 8px rgba(220, 38, 38, 0.15)',
               transform: 'scale(1)',
-              border: 'none',
-              cursor: 'pointer'
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              cursor: 'pointer',
+              outline: 'none',
+              WebkitTapHighlightColor: 'transparent'
             }}
             onMouseEnter={(e) => {
               e.target.style.transform = 'scale(1.05)';
-              e.target.style.boxShadow = `0 12px 48px ${colors.primary}60`;
+              e.target.style.boxShadow = darkMode
+                ? '0 12px 48px rgba(220, 38, 38, 0.6), 0 4px 12px rgba(220, 38, 38, 0.3)'
+                : '0 12px 48px rgba(220, 38, 38, 0.5), 0 4px 12px rgba(220, 38, 38, 0.25)';
             }}
             onMouseLeave={(e) => {
               e.target.style.transform = 'scale(1)';
-              e.target.style.boxShadow = `0 8px 32px ${colors.primary}40`;
+              e.target.style.boxShadow = darkMode
+                ? '0 8px 32px rgba(220, 38, 38, 0.4), 0 2px 8px rgba(220, 38, 38, 0.2)'
+                : '0 8px 32px rgba(220, 38, 38, 0.3), 0 2px 8px rgba(220, 38, 38, 0.15)';
             }}
           >
-            <span className="relative z-10"> NUOVA PARTITA </span>
+            {/* Effetto shine principale */}
+            <ShineEffect show={true} />
             
-            {/* Effetto shine */}
+            {/* Effetto shine aggiuntivo per la vittoria */}
             <div 
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-300"
-              style={{ transform: 'skewX(-45deg) translateX(-100%)' }}
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-300"
+              style={{ 
+                transform: 'skewX(-45deg) translateX(-100%)',
+                animation: 'shine 2s ease-in-out infinite'
+              }}
             />
+            
+            <span className="relative z-10 drop-shadow-lg"> NUOVA PARTITA </span>
           </button>
         </div>
 
@@ -760,6 +935,11 @@ const DartsGame = () => {
             from { transform: scale(1); }
             to { transform: scale(1.1); }
           }
+          
+          @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
         `}</style>
       </div>
     );
@@ -783,7 +963,8 @@ const DartsGame = () => {
             className="p-2 rounded-lg transition-colors"
             style={{ 
               backgroundColor: colors.button,
-              color: colors.text
+              color: colors.text,
+              border: `1px solid ${colors.border}`
             }}
           >
             <b>RESTART</b>
@@ -918,15 +1099,38 @@ const DartsGame = () => {
               <button
                 onClick={nextPlayer}
                 disabled={winner || throwsCount < 3}
-                className="py-4 rounded-md font-semibold text-white text-lg transition-colors disabled:opacity-50"
+                className="py-4 rounded-md font-semibold text-white text-lg transition-colors disabled:opacity-50 relative overflow-hidden"
                 style={{ 
-                  backgroundColor: (winner || throwsCount < 3) ? colors.border : colors.primary,
+                  background: (winner || throwsCount < 3) 
+                    ? colors.border 
+                    : (darkMode 
+                        ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%)'
+                        : 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)'),
+                  boxShadow: (winner || throwsCount < 3) 
+                    ? 'none' 
+                    : (darkMode
+                        ? '0 8px 32px rgba(220, 38, 38, 0.3), 0 2px 8px rgba(220, 38, 38, 0.1)'
+                        : '0 8px 32px rgba(220, 38, 38, 0.2), 0 2px 8px rgba(220, 38, 38, 0.1)'),
+                  border: (winner || throwsCount < 3) 
+                    ? `1px solid ${colors.border}` 
+                    : '2px solid rgba(255, 255, 255, 0.2)',
                   cursor: (winner || throwsCount < 3) ? 'not-allowed' : 'pointer',
                   outline: 'none',
                   WebkitTapHighlightColor: 'transparent'
                 }}
               >
-                NEXT PLAYER
+                {/* Effetto shine per il pulsante Next Player quando è attivo */}
+                {!winner && throwsCount >= 3 && (
+                  <div 
+                    className="absolute inset-0 opacity-10"
+                    style={{
+                      background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%)',
+                      transform: 'translateX(-100%)',
+                      animation: 'shine 3s ease-in-out infinite'
+                    }}
+                  />
+                )}
+                <span className="relative z-10">NEXT PLAYER</span>
               </button>
             </div>
           </div>
