@@ -61,6 +61,9 @@ const DartsGame = () => {
   // Stato per l'animazione dei pulsanti
   const [pressedButton, setPressedButton] = useState(null);
 
+  // Nuovo stato per tracciare i nomi duplicati
+  const [duplicateNames, setDuplicateNames] = useState([]);
+
   // Effetto per rilevare la preferenza del sistema
   useEffect(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -150,8 +153,8 @@ const DartsGame = () => {
   // Formatta il tiro per la visualizzazione
   const formatThrow = (value, multiplier) => {
     if (value === 0) return 'MISS';
-    if (value === 25) return 'BULL';
-    if (value === 50) return 'BULL';
+    if (value === 25) return '25';
+    if (value === 50) return '50';
     
     if (multiplier === 1) return value.toString();
     if (multiplier === 2) return `D${value}`;
@@ -251,17 +254,37 @@ const DartsGame = () => {
   };
 
   const handleNameChange = (idx, value) => {
-    setNameInputs(prev => {
-      const next = [...prev];
-      next[idx] = value.slice(0, 8); // max 8 caratteri
-      return next;
+    const newInputs = [...nameInputs];
+    newInputs[idx] = value.slice(0, 8); // max 8 caratteri
+    setNameInputs(newInputs);
+
+    // Controlla duplicati
+    const duplicates = [];
+    newInputs.forEach((name, index) => {
+      const trimmedName = name.trim().toLowerCase();
+      if (trimmedName) {
+        // Conta quante volte appare questo nome
+        const sameNameCount = newInputs.filter(otherName => 
+          otherName.trim().toLowerCase() === trimmedName
+        ).length;
+        
+        if (sameNameCount > 1) {
+          duplicates.push(index);
+        }
+      }
     });
+    
+    setDuplicateNames([...new Set(duplicates)]);
   };
 
   const startGame = () => {
     if (!selectedNumPlayers) return;
-    const names = nameInputs.map((n, i) => (n && n.trim()) ? n.trim() : `PLAYER ${i + 1}`);
-    initGame(selectedNumPlayers, names);
+    
+    // Controlla se ci sono nomi duplicati
+    if (duplicateNames.length > 0) return;
+    
+    const finalNames = nameInputs.map((n, i) => (n && n.trim()) ? n.trim() : `PLAYER ${i + 1}`);
+    initGame(selectedNumPlayers, finalNames);
   };
 
   // Ordine inattivi: per id crescente, escludendo l'attivo
@@ -474,29 +497,37 @@ const DartsGame = () => {
               </p>
               <div className="grid gap-3" style={{ gridTemplateColumns: '1fr' }}>
                 {Array.from({ length: selectedNumPlayers }, (_, i) => (
-                  <input
-                    key={i}
-                    type="text"
-                    maxLength={8}
-                    value={nameInputs[i] || ''}
-                    onChange={(e) => handleNameChange(i, e.target.value)}
-                    placeholder={`PLAYER ${i + 1}`}
-                    className="w-full px-3 py-2 rounded-md"
-                    style={{
-                      border: `1px solid ${colors.border}`,
-                      color: colors.text,
-                      backgroundColor: colors.cardBg
-                    }}
-                  />
+                  <div key={i} className="relative">
+                    <input
+                      type="text"
+                      maxLength={8}
+                      value={nameInputs[i] || ''}
+                      onChange={(e) => handleNameChange(i, e.target.value)}
+                      placeholder={`PLAYER ${i + 1}`}
+                      className="w-full px-3 py-2 rounded-md"
+                      style={{
+                        border: `1px solid ${duplicateNames.includes(i) ? '#dc2626' : colors.border}`,
+                        color: colors.text,
+                        backgroundColor: colors.cardBg
+                      }}
+                    />
+                    {duplicateNames.includes(i) && nameInputs[i] && nameInputs[i].trim() && (
+                      <p className="text-xs mt-1" style={{ color: '#dc2626' }}>
+                        Non ci possono essere due nomi uguali
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
 
               <button
                 onClick={startGame}
+                disabled={duplicateNames.length > 0}
                 className="w-full py-3 rounded-lg font-semibold text-white text-lg transition-colors"
                 style={{ 
-                  backgroundColor: colors.primary,
-                  cursor: 'pointer'
+                  backgroundColor: duplicateNames.length > 0 ? '#6b7280' : colors.primary,
+                  opacity: duplicateNames.length > 0 ? 0.5 : 1,
+                  cursor: duplicateNames.length > 0 ? 'not-allowed' : 'pointer'
                 }}
               >
                 Avvia Partita
@@ -513,25 +544,223 @@ const DartsGame = () => {
     const colors = getColors();
     
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: colors.background }}>
-        <div className="rounded-lg shadow-lg p-8 max-w-md w-full text-center" style={{ backgroundColor: colors.cardBg }}>
-          <h1 className="text-4xl font-bold mb-4" style={{ color: colors.primary }}>
-            🎉 VITTORIA! 🎉
-          </h1>
-          <h2 className="text-2xl font-semibold mb-6" style={{ color: colors.text }}>
-            {winner.name} HA VINTO!
-          </h2>
-          <button
-            onClick={resetGame}
-            className="py-3 px-8 rounded-lg font-semibold text-lg transition-colors"
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: colors.background }}>
+        {/* Sfondo animato con gradiente dinamico */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            background: `
+              radial-gradient(circle at 20% 80%, ${colors.primary}40 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, #fbbf2440 0%, transparent 50%),
+              radial-gradient(circle at 40% 40%, ${colors.primary}30 0%, transparent 50%)
+            `,
+            animation: 'pulse 3s ease-in-out infinite alternate'
+          }}
+        />
+        
+        {/* Particelle animate */}
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full opacity-70"
+            style={{
+              width: Math.random() * 8 + 4 + 'px',
+              height: Math.random() * 8 + 4 + 'px',
+              backgroundColor: i % 3 === 0 ? colors.primary : i % 3 === 1 ? '#fbbf24' : '#8b5cf6',
+              left: Math.random() * 100 + '%',
+              top: Math.random() * 100 + '%',
+              animation: `float ${3 + Math.random() * 4}s ease-in-out infinite alternate`,
+              animationDelay: Math.random() * 2 + 's'
+            }}
+          />
+        ))}
+
+        {/* Card principale con effetto glassmorphism */}
+        <div 
+          className="rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center relative z-10"
+          style={{ 
+            backgroundColor: darkMode ? 'rgba(22, 27, 34, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(20px)',
+            border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
+          }}
+        >
+          {/* Corona animata */}
+          <div className="mb-6 relative">
+            <div 
+              className="text-8xl mx-auto w-fit relative"
+              style={{ 
+                animation: 'bounce 2s ease-in-out infinite',
+                filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
+              }}
+            >
+              👑
+            </div>
+            {/* Brillantini intorno alla corona */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute text-2xl"
+                style={{
+                  left: '50%',
+                  top: '50%',
+                  transform: `translate(-50%, -50%) rotate(${i * 60}deg) translateY(-60px)`,
+                  animation: `twinkle ${1.5 + Math.random()}s ease-in-out infinite alternate`,
+                  animationDelay: Math.random() * 1 + 's'
+                }}
+              >
+                ✨
+              </div>
+            ))}
+          </div>
+
+          {/* Titolo principale con gradiente */}
+          <h1 
+            className="text-5xl font-black mb-2"
             style={{ 
-              backgroundColor: colors.primary,
-              color: 'white'
+              background: `linear-gradient(45deg, ${colors.primary}, #fbbf24, ${colors.primary})`,
+              backgroundSize: '200% 200%',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              animation: 'gradientShift 3s ease-in-out infinite'
             }}
           >
-            Nuova Partita
+            VITTORIA!
+          </h1>
+
+          {/* Nome vincitore con effetto neon */}
+          <div className="mb-8">
+            <h2 
+              className="text-3xl font-bold mb-2"
+              style={{ 
+                color: colors.text,
+                textShadow: `0 0 20px ${colors.primary}40, 0 0 40px ${colors.primary}20`,
+                animation: 'glow 2s ease-in-out infinite alternate'
+              }}
+            >
+              {winner.name}
+            </h2>
+            <p className="text-xl font-medium" style={{ color: colors.textSecondary }}>
+              è il CAMPIONE! 🏆
+            </p>
+          </div>
+
+          {/* Statistiche della partita */}
+          <div 
+            className="rounded-xl p-4 mb-6"
+            style={{ 
+              backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
+            }}
+          >
+            <h3 className="text-lg font-semibold mb-3" style={{ color: colors.text }}>
+              Classifica Finale
+            </h3>
+            <div className="space-y-2">
+              {players
+                .slice()
+                .sort((a, b) => a.score - b.score)
+                .map((player, index) => (
+                  <div 
+                    key={player.id}
+                    className="flex justify-between items-center py-2 px-3 rounded-lg"
+                    style={{
+                      backgroundColor: player.id === winner.id 
+                        ? `${colors.primary}20` 
+                        : darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)'
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-lg">
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}
+                      </span>
+                      <span 
+                        className="font-medium"
+                        style={{ 
+                          color: player.id === winner.id ? colors.primary : colors.text 
+                        }}
+                      >
+                        {player.name}
+                      </span>
+                    </span>
+                    <span 
+                      className="font-bold"
+                      style={{ 
+                        color: player.id === winner.id ? colors.primary : colors.textSecondary 
+                      }}
+                    >
+                      {player.score}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Pulsante nuova partita con effetto hover spettacolare */}
+          <button
+            onClick={resetGame}
+            className="relative py-4 px-10 rounded-xl font-bold text-xl text-white transition-all duration-300 overflow-hidden group"
+            style={{ 
+              background: `linear-gradient(45deg, ${colors.primary}, #dc2626, ${colors.primary})`,
+              backgroundSize: '200% 200%',
+              animation: 'gradientShift 3s ease-in-out infinite',
+              boxShadow: `0 8px 32px ${colors.primary}40`,
+              transform: 'scale(1)',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'scale(1.05)';
+              e.target.style.boxShadow = `0 12px 48px ${colors.primary}60`;
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.boxShadow = `0 8px 32px ${colors.primary}40`;
+            }}
+          >
+            <span className="relative z-10"> NUOVA PARTITA </span>
+            
+            {/* Effetto shine */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+              style={{ transform: 'skewX(-45deg) translateX(-100%)' }}
+            />
           </button>
         </div>
+
+        {/* Stili CSS per le animazioni */}
+        <style jsx>{`
+          @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-20px); }
+            60% { transform: translateY(-10px); }
+          }
+          
+          @keyframes float {
+            from { transform: translateY(0px) rotate(0deg); }
+            to { transform: translateY(-20px) rotate(180deg); }
+          }
+          
+          @keyframes twinkle {
+            from { opacity: 0.3; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1.2); }
+          }
+          
+          @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          
+          @keyframes glow {
+            from { text-shadow: 0 0 20px ${colors.primary}40, 0 0 40px ${colors.primary}20; }
+            to { text-shadow: 0 0 30px ${colors.primary}60, 0 0 60px ${colors.primary}40; }
+          }
+          
+          @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -640,8 +869,8 @@ const DartsGame = () => {
             <div className="grid grid-cols-3 gap-1">
               {[
                 { value: 0, multiplier: 1, label: 'MISS' },
-                { value: 25, multiplier: 1, label: 'BULL (25)' },
-                { value: 50, multiplier: 1, label: 'BULL (50)' }
+                { value: 25, multiplier: 1, label: '25' },
+                { value: 50, multiplier: 1, label: '50' }
               ].map(({ value, multiplier, label }) => {
                 const buttonId = `${value}-${multiplier}`;
                 const isPressed = pressedButton === buttonId;
