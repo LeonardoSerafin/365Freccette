@@ -569,10 +569,10 @@ const DartsGame = () => {
 
       {/* Griglia punteggi */}
       <div className="p-4">
-        <div className="mx-auto w-full rounded-lg shadow-sm p-3" style={{ backgroundColor: colors.cardBg }}>
+        <div className="mx-auto w-full rounded-lg shadow-sm p-[1px] pb-[1px]" style={{ backgroundColor: colors.cardBg }}>
           
           {/* Righe con separatori e sfondi per x2/x3 */}
-          <div className="space-y-1">
+          <div className="space-y-1 px-[1px]">
             {DART_VALUES.map((row, rowIndex) => {
               const isGroupStart = rowIndex === 2 || rowIndex === 4;
 
@@ -600,7 +600,8 @@ const DartsGame = () => {
                           cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer',
                           transform: isPressed ? 'scale(1.1)' : 'scale(1)',
                           transition: isPressed ? 'none' : `all ${ANIMATION_DURATION}ms ease-out`,
-                          outline: 'none'
+                          outline: 'none',
+                          WebkitTapHighlightColor: 'transparent'
                         }}
                       >
                         {/* Valore numerico */}
@@ -634,9 +635,9 @@ const DartsGame = () => {
           </div>
 
           {/* Pulsanti speciali */}
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-1 px-[5px] pb-[5px]">
             {/* Riga 1: Miss, 25 e 50 */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1">
               {[
                 { value: 0, multiplier: 1, label: 'MISS' },
                 { value: 25, multiplier: 1, label: 'BULL (25)' },
@@ -658,7 +659,8 @@ const DartsGame = () => {
                       cursor: throwsCount >= 3 ? 'not-allowed' : 'pointer',
                       transform: isPressed ? 'scale(1.05)' : 'scale(1)',
                       transition: isPressed ? 'none' : `all ${ANIMATION_DURATION}ms ease-out`,
-                      outline: 'none'
+                      outline: 'none',
+                      WebkitTapHighlightColor: 'transparent'
                     }}
                   >
                     {label}
@@ -668,7 +670,7 @@ const DartsGame = () => {
             </div>
             
             {/* Riga 2: BACK e Next Player */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1">
               <button
                 onClick={undoLastMove}
                 disabled={gameHistory.length <= 1}
@@ -678,7 +680,8 @@ const DartsGame = () => {
                   color: colors.text,
                   border: `1px solid ${colors.border}`,
                   cursor: gameHistory.length <= 1 ? 'not-allowed' : 'pointer',
-                  outline: 'none'
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
               >
                 BACK
@@ -690,7 +693,8 @@ const DartsGame = () => {
                 style={{ 
                   backgroundColor: (winner || throwsCount < 3) ? colors.border : colors.primary,
                   cursor: (winner || throwsCount < 3) ? 'not-allowed' : 'pointer',
-                  outline: 'none'
+                  outline: 'none',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
               >
                 NEXT PLAYER
