@@ -1,0 +1,164 @@
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Animazione cambio giocatore - semplice pulsazione */
+.player-change-pulse {
+  animation: changePlayerPulse 0.4s ease-in-out;
+}
+
+@keyframes changePlayerPulse {
+  0% { 
+    transform: scale(1);
+  }
+  50% { 
+    transform: scale(1.05);
+  }
+  100% { 
+    transform: scale(1);
+  }
+}
+
+/* Animazione reset a 365 con riempimento rosso */
+.reset-animation {
+  animation: resetTo365 2s ease-in-out;
+  overflow: hidden;
+  position: relative;
+}
+
+.reset-animation::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.4) 0%, rgba(185, 28, 28, 0.2) 100%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: redWaveExpansion 2s ease-out;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes resetTo365 {
+  0% { 
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  15% { 
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+  100% { 
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes redWaveExpansion {
+  0% {
+    width: 20px;
+    height: 20px;
+    opacity: 0;
+  }
+  10% {
+    width: 40px;
+    height: 40px;
+    opacity: 0.9;
+  }
+  30% {
+    width: 120%;
+    height: 120%;
+    opacity: 0.8;
+  }
+  60% {
+    width: 200%;
+    height: 200%;
+    opacity: 0.7;
+    border-radius: 20%;
+  }
+  80% {
+    width: 300%;
+    height: 300%;
+    opacity: 0.5;
+    border-radius: 10%;
+  }
+  100% {
+    width: 400%;
+    height: 400%;
+    opacity: 0;
+    border-radius: 0%;
+  }
+}
+
+/* Animazioni responsive per landscape */
+@media (min-width: 1024px) and (orientation: landscape) {
+  .reset-animation {
+    animation: resetTo365Large 2s ease-in-out;
+  }
+
+  @keyframes resetTo365Large {
+    0% { 
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    20% { 
+      transform: scale(1.05);
+      filter: brightness(1.2);
+    }
+    100% { 
+      transform: scale(1);
+      filter: brightness(1);
+    }
+  }
+
+  /* Pulsazione leggermente più pronunciata in landscape */
+  .player-change-pulse {
+    animation: changePlayerPulseLarge 0.4s ease-in-out;
+  }
+
+  @keyframes changePlayerPulseLarge {
+    0% { 
+      transform: scale(1);
+    }
+    50% { 
+      transform: scale(1.08);
+    }
+    100% { 
+      transform: scale(1);
+    }
+  }
+}
+
+/* Effetti hover migliorati */
+@media (hover: hover) {
+  .rounded-lg:not(.disabled):hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Animazioni per il cambio tema */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Ottimizzazioni per performance */
+.rounded-lg {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Accessibilità per animazioni ridotte */
+@media (prefers-reduced-motion: reduce) {
+  .player-change-pulse,
+  .reset-animation {
+    animation-duration: 0.3s;
+  }
+  
+  .reset-animation::before {
+    animation-duration: 0.5s;
+  }
+}
