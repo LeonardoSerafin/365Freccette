@@ -189,34 +189,78 @@ const DartsGame = () => {
       </div>
 
       {/* Layout principale */}
-      <div className={isLandscape ? 'flex gap-6' : ''}>
-        <div className={isLandscape ? 'flex-shrink-0 p-4' : 'p-4'}>
-          <Scoreboard 
-            players={players}
-            currentPlayer={currentPlayer}
-            currentTurnThrows={currentTurnThrows}
-            darkMode={darkMode}
-            isLandscape={isLandscape}
-            numPlayers={numPlayers}
-            resetAnimations={resetAnimations}
-            nextPlayerAnimation={nextPlayerAnimation}
-          />
-        </div>
+      <div className="flex-1 flex overflow-hidden">
+        {isLandscape ? (
+          // Layout landscape
+          <>
+            <div className="p-4 flex-shrink-0">
+              <Scoreboard 
+                players={players}
+                currentPlayer={currentPlayer}
+                currentTurnThrows={currentTurnThrows}
+                darkMode={darkMode}
+                isLandscape={isLandscape}
+                numPlayers={numPlayers}
+                resetAnimations={resetAnimations}
+                nextPlayerAnimation={nextPlayerAnimation}
+              />
+            </div>
 
-        <div className={`p-4 ${isLandscape ? 'flex-1 max-w-2xl' : ''}`}>
-          <GameBoard 
-            onScore={handleScore}
-            onUndo={undoLastMove}
-            onNextPlayer={nextPlayer}
-            throwsCount={throwsCount}
-            winner={winner}
-            gameHistory={gameHistory}
-            pressedButton={pressedButton}
-            darkMode={darkMode}
-            isLandscape={isLandscape}
-          />
-        </div>
+            <div className="flex-1 p-4 overflow-hidden">
+              <GameBoard 
+                onScore={handleScore}
+                onUndo={undoLastMove}
+                onNextPlayer={nextPlayer}
+                throwsCount={throwsCount}
+                winner={winner}
+                gameHistory={gameHistory}
+                pressedButton={pressedButton}
+                darkMode={darkMode}
+                isLandscape={isLandscape}
+              />
+            </div>
+          </>
+        ) : (
+          // Layout portrait
+          <div className="flex-1 flex flex-col">
+            <div className="p-4">
+              <Scoreboard 
+                players={players}
+                currentPlayer={currentPlayer}
+                currentTurnThrows={currentTurnThrows}
+                darkMode={darkMode}
+                isLandscape={isLandscape}
+                numPlayers={numPlayers}
+                resetAnimations={resetAnimations}
+                nextPlayerAnimation={nextPlayerAnimation}
+              />
+            </div>
+
+            <div className="p-4 flex-1">
+              <GameBoard 
+                onScore={handleScore}
+                onUndo={undoLastMove}
+                onNextPlayer={nextPlayer}
+                throwsCount={throwsCount}
+                winner={winner}
+                gameHistory={gameHistory}
+                pressedButton={pressedButton}
+                darkMode={darkMode}
+                isLandscape={isLandscape}
+              />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Modal sempre presente */}
+      {showResetConfirm && (
+        <ResetConfirmModal
+          onConfirm={confirmReset}
+          onCancel={cancelReset}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 };
